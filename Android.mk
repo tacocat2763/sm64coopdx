@@ -8,6 +8,9 @@ endif
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
   VALID_ARCH := 1
 endif
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+  VALID_ARCH := 1
+endif
 
 ifeq ($(VALID_ARCH),0)
   $(error $(TARGET_ARCH_ABI) is not supported)
