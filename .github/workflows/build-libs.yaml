@@ -1,4 +1,4 @@
-name: Build 32-bit Libs
+name: Build armeabi-v7a libs
 
 on:
   workflow_dispatch:
