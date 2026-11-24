@@ -18,15 +18,19 @@ jobs:
           sudo apt update
           sudo apt install -y cmake ninja-build wget unzip git build-essential
 
-      - name: Set up folders and NDK
+      - name: Set up folders and NDK 27
         run: |
           mkdir -p "$GITHUB_WORKSPACE/lib/lua/android/armeabi-v7a"
           mkdir -p "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a"
           mkdir -p "$GITHUB_WORKSPACE/lib/sdl2/android/armeabi-v7a"
           mkdir -p "$GITHUB_WORKSPACE/lib/curl/android/armeabi-v7a"
           mkdir -p $HOME/src
-          echo "NDK=$ANDROID_NDK_LATEST_HOME" >> $GITHUB_ENV
-          echo "TOOLCHAIN=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64" >> $GITHUB_ENV
+          NDK_PATH="/usr/local/lib/android/sdk/ndk/27.0.12077973"
+          if [ ! -d "$NDK_PATH" ]; then
+            yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;27.0.12077973"
+          fi
+          echo "NDK=$NDK_PATH" >> $GITHUB_ENV
+          echo "TOOLCHAIN=$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64" >> $GITHUB_ENV
 
       - name: Build liblua.a
         run: |
@@ -61,12 +65,48 @@ jobs:
           done
           $TOOLCHAIN/bin/llvm-ar rcs "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/libcoopnet.a" bin/o/common/*.o
 
-      - name: Build libSDL2.so
+      - name: Build libSDL2.so (with ManIsCat2 Android helpers)
         run: |
           cd $HOME/src
-          wget "https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-2.30.9.tar.gz"
-          tar -xzf SDL2-2.30.9.tar.gz
-          cd SDL2-2.30.9
+          wget "https://github.com/libsdl-org/SDL/releases/download/release-2.28.1/SDL2-2.28.1.tar.gz"
+          tar -xzf SDL2-2.28.1.tar.gz
+          cd SDL2-2.28.1
+          cp "$GITHUB_WORKSPACE/lib/sdl2/include/SDL2/SDL_system.h" include/SDL_system.h
+          cat << 'EOF' >> src/core/android/SDL_android.c
+
+          const char * SDL_AndroidGetTopExternalStoragePath(void)
+          {
+              static char *s_top_path = NULL;
+              if (!s_top_path) {
+                  JNIEnv *env = Android_JNI_GetEnv();
+                  jclass envClass = (*env)->FindClass(env, "android/os/Environment");
+                  jmethodID mid = (*env)->GetStaticMethodID(env, envClass, "getExternalStorageDirectory", "()Ljava/io/File;");
+                  jobject fileObj = (*env)->CallStaticObjectMethod(env, envClass, mid);
+                  jclass fileClass = (*env)->GetObjectClass(env, fileObj);
+                  jmethodID pathMid = (*env)->GetMethodID(env, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+                  jstring pathStr = (jstring)(*env)->CallObjectMethod(env, fileObj, pathMid);
+                  const char *utf = (*env)->GetStringUTFChars(env, pathStr, NULL);
+                  s_top_path = SDL_strdup(utf);
+                  (*env)->ReleaseStringUTFChars(env, pathStr, utf);
+                  (*env)->DeleteLocalRef(env, pathStr);
+                  (*env)->DeleteLocalRef(env, fileClass);
+                  (*env)->DeleteLocalRef(env, fileObj);
+                  (*env)->DeleteLocalRef(env, envClass);
+              }
+              return s_top_path;
+          }
+
+          void SDL_AndroidCopyAssetFilesToDir(const char *destpath)
+          {
+              JNIEnv *env = Android_JNI_GetEnv();
+              jclass actClass = (*env)->FindClass(env, "org/libsdl/app/SDLActivity");
+              jmethodID mid = (*env)->GetStaticMethodID(env, actClass, "copyAssetFilesToDir", "(Ljava/lang/String;)V");
+              jstring jDest = (*env)->NewStringUTF(env, destpath);
+              (*env)->CallStaticVoidMethod(env, actClass, mid, jDest);
+              (*env)->DeleteLocalRef(env, jDest);
+              (*env)->DeleteLocalRef(env, actClass);
+          }
+          EOF
           $NDK/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=Android.mk APP_ABI=armeabi-v7a APP_PLATFORM=android-24
           cp libs/armeabi-v7a/libSDL2.so "$GITHUB_WORKSPACE/lib/sdl2/android/armeabi-v7a/"
 
@@ -100,7 +140,7 @@ jobs:
           git add -f lib/coopnet/android/armeabi-v7a/libjuice.a
           git add -f lib/sdl2/android/armeabi-v7a/libSDL2.so
           git add -f lib/curl/android/armeabi-v7a/libcurl.so
-          git commit -m "Add 32-bit armeabi-v7a libraries"
+          git commit -m "Rebuild 32-bit armeabi-v7a libraries with NDK 27 and custom SDL2 helpers"
           git push
 
       - name: Backup zip
