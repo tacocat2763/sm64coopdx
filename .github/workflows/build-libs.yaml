@@ -38,19 +38,17 @@ jobs:
           $TOOLCHAIN/bin/armv7a-linux-androideabi24-clang -O3 -fPIC -DLUA_USE_POSIX -c *.c
           $TOOLCHAIN/bin/llvm-ar rcs "$GITHUB_WORKSPACE/lib/lua/android/armeabi-v7a/liblua.a" *.o
 
-      - name: Build libcoopnet.a & libjuice.a
+          - name: Build libcoopnet.a & libjuice.a
         run: |
           cd $HOME/src
-          git clone --recursive "https://github.com/coop-deluxe/coopnet.git"
-          cd coopnet
-          cmake -B build -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=armeabi-v7a \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release
-          cmake --build build
-          find build -name "libcoopnet.a" -exec cp {} "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/" \;
-          find build -name "libjuice.a" -exec cp {} "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/" \;
+          git clone --recursive "https://github.com""/coop-deluxe/coopnet.git"
+          cd coopnet/client
+          make CC="$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang" \
+               CXX="$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang++" \
+               AR="$TOOLCHAIN/bin/llvm-ar"
+          find .. -name "libcoopnet.a" -exec cp {} "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/" \;
+          find .. -name "libjuice.a" -exec cp {} "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/" \;
+
 
       - name: Build libSDL2.so
         run: |
