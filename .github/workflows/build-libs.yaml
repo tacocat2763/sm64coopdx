@@ -38,17 +38,28 @@ jobs:
           $TOOLCHAIN/bin/armv7a-linux-androideabi24-clang -O3 -fPIC -DLUA_USE_POSIX -c *.c
           $TOOLCHAIN/bin/llvm-ar rcs "$GITHUB_WORKSPACE/lib/lua/android/armeabi-v7a/liblua.a" *.o
 
-      - name: Build libcoopnet.a & libjuice.a
+      - name: Build libjuice.a & libcoopnet.a
         run: |
+          cd $HOME/src
+          git clone --recursive "https://github.com/paullouisageneau/libjuice.git"
+          cd libjuice
+          cmake -B build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=armeabi-v7a \
+            -DANDROID_PLATFORM=android-24 \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          find build -name "libjuice.a" -exec cp {} "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/" \;
+
           cd $HOME/src
           git clone --recursive "https://github.com/coop-deluxe/coopnet.git"
           cd coopnet
-          sed -i 's/-Werror//g; s/-Wno-nonnull-compare//g' Makefile
-          make client CC="$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang" \
-                      CXX="$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang++" \
-                      AR="$TOOLCHAIN/bin/llvm-ar"
-          find . -name "libcoopnet.a" -exec cp {} "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/" \;
-          find . -name "libjuice.a" -exec cp {} "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/" \;
+          mkdir -p bin/o/common
+          for f in common/*.cpp; do
+            $TOOLCHAIN/bin/armv7a-linux-androideabi24-clang++ -Wall -Wno-unused-function -std=c++11 -fPIC -DJUICE_STATIC -O3 -Icommon -Ilib/include -c "$f" -o "bin/o/common/$(basename "$f" .cpp).o"
+          done
+          $TOOLCHAIN/bin/llvm-ar rcs "$GITHUB_WORKSPACE/lib/coopnet/android/armeabi-v7a/libcoopnet.a" bin/o/common/*.o
 
       - name: Build libSDL2.so
         run: |
