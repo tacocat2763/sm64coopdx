@@ -12,3 +12,6 @@ Make a sm64coopdx android release for 32Bit devices.
 ## Documentation
 
 sm64coopdx is moddable via Lua, similar to Roblox and Garry's Mod's Lua APIs. To get started, click [here](docs/lua/lua.md) to see the Lua documentation. If you want to contribute to the repo, you can view the C documentation [here](docs/c/c.md).
+
+## Credits
+They all go to ManIsCat2 and the sm64coopdx Team.
