@@ -6,7 +6,7 @@ Feel free to report bugs or contribute to the project.
 
 All Changes and Codes made with AI (Gemini).
 
-## Initial Goal (NOT Accomplished)
+## Initial Goal (Accomplished)
 Make a sm64coopdx android release for 32Bit devices.
 
 ## Documentation
