@@ -1,4 +1,4 @@
-**This repo is archived and probably won't be used again or whatever**
+**This repo is archived and probably won't be used again or whatever,**
 **For a Stable sm64coopdx for 32Bit Android-ers please go to
 https://github.com/masxrenpy/sm64coopdx_armv7**
 
